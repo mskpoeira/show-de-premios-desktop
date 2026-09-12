@@ -1,0 +1,30 @@
+{
+  "name": "show-de-premios-desktop",
+  "version": "0.1.0",
+  "description": "Show de Prêmios - aplicativo desktop offline-first",
+  "main": "src/main.js",
+  "author": "Thiago Alves Cardozo",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "pack:win": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "br.com.mskpoeira.showdepremios",
+    "productName": "Show de Prêmios",
+    "directories": { "output": "dist" },
+    "files": ["src/**/*", "package.json"],
+    "win": { "target": "nsis" },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
