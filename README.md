@@ -1,6 +1,6 @@
 # Show de Prêmios — aplicativo desktop
 
-Versão 0.2 operacional do sistema para Windows, desenvolvida em Electron com JavaScript puro. Funciona offline e grava os dados no perfil local do usuário.
+Versão 0.3 operacional do sistema para Windows, desenvolvida em Electron com JavaScript puro. Funciona offline e grava os dados no perfil local do usuário.
 
 ## Módulos incluídos
 
@@ -10,6 +10,14 @@ Versão 0.2 operacional do sistema para Windows, desenvolvida em Electron com Ja
 - vendas com preços automáticos e geração de cartelas rastreáveis;
 - pagamentos em dinheiro, PIX, débito e crédito, preservando o preço histórico;
 - cadastros de vendedores, comissões, desempenho, usuários e perfis;
+- edição de vendedores e usuários, mantendo o Administrador Master protegido;
+- área de banco exclusiva do Master, com consulta, filtro, edição e exclusão auditada;
+- vendedores e operadores com nome, telefone e e-mail;
+- rodadas progressivas, iniciadas em 1 e sem limite fixo;
+- múltiplos prêmios por rodada e padrões de vitória;
+- sorteio automático, por clique na bola ou por digitação manual;
+- registro da ordem, horário, modo e operador de cada bola;
+- gerador de cartelas físicas e digitais, lotes de até 1.000 e impressão de 1, 2 ou 4 por A4;
 - rodadas e prêmios em tabela editável;
 - sugestão automática de premiação com 50% das vendas, dividida em 65% e 35%;
 - sorteio de 1 a 75 sem repetição, com desfazer;
@@ -19,6 +27,7 @@ Versão 0.2 operacional do sistema para Windows, desenvolvida em Electron com Ja
 - PIX BR Code/EMVCo com chave normalizada, CRC16-CCITT e QR Code de teste;
 - QR PIX configurável e ticker de preços no telão;
 - relatórios, auditoria, importação e exportação de backup;
+- central de relatórios com seleção individual de resumo, vendas, rodadas, vendedores, fechamentos e auditoria;
 - configurações de evento, prefixo, número de rodadas, preços e modelo de cartela.
 
 ## Abrir pela primeira vez

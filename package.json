@@ -1,6 +1,6 @@
 {
   "name": "show-de-premios-desktop",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Show de Prêmios - aplicativo desktop offline-first",
   "main": "src/main.js",
   "author": "Thiago Alves Cardozo",

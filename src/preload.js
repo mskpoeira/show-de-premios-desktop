@@ -5,5 +5,6 @@ contextBridge.exposeInMainWorld('showApp', {
   exportBackup: data => ipcRenderer.invoke('data:export', data),
   importBackup: () => ipcRenderer.invoke('data:import'),
   openScreen: () => ipcRenderer.invoke('screen:open'),
+  closeScreen: () => ipcRenderer.invoke('screen:close'),
   pixQr: (config, amount, reference) => ipcRenderer.invoke('pix:generate', config, amount, reference)
 });
