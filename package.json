@@ -1,6 +1,6 @@
 {
   "name": "show-de-premios-desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Show de Prêmios - aplicativo desktop offline-first",
   "main": "src/main.js",
   "author": "Thiago Alves Cardozo",
@@ -12,7 +12,8 @@
   },
   "devDependencies": {
     "electron": "^39.0.0",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "qrcode": "^1.5.4"
   },
   "build": {
     "appId": "br.com.mskpoeira.showdepremios",
