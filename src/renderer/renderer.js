@@ -9,6 +9,7 @@
   try {
     await load('renderer-core.js');
     await load('renderer-logic.js');
+    await load('renderer-fixes.js');
     await load('renderer-events.js');
   } catch (error) {
     console.error(error);
