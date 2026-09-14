@@ -8,10 +8,12 @@ function loadLogic() {
   const context = { console, crypto, state: { sequences: { sale: 0, card: 0 } } };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(require.resolve('../src/renderer/renderer-logic.js'), 'utf8'), context);
+  vm.runInContext(fs.readFileSync(require.resolve('../src/renderer/renderer-fixes.js'), 'utf8'), context);
   return context;
 }
 
 const sampleCard = {
+  layout: 'BINGO75',
   numbers: [
     1, 16, 31, 46, 61,
     2, 17, 32, 47, 62,
@@ -21,12 +23,25 @@ const sampleCard = {
   ]
 };
 
-test('apuração reconhece linha, cantos e cartela cheia', () => {
+test('apuração final reconhece linha horizontal, cantos e cartela cheia', () => {
   const ctx = loadLogic();
   assert.equal(ctx.missingForPattern(sampleCard, [1, 16, 31, 46, 61], 'LINE'), 0);
   assert.equal(ctx.missingForPattern(sampleCard, [1, 61, 5, 65], 'CORNERS'), 0);
   assert.equal(ctx.missingForPattern(sampleCard, sampleCard.numbers, 'FULL'), 0);
   assert.equal(ctx.missingForPattern(sampleCard, [1, 16, 31, 46], 'LINE'), 1);
+});
+
+test('linha vertical não é confundida com linha horizontal', () => {
+  const ctx = loadLogic();
+  assert.ok(ctx.missingForPattern(sampleCard, [1, 2, 3, 4, 5], 'LINE') > 0);
+});
+
+test('cartela legada não participa de linha ou cantos sem grade confiável', () => {
+  const ctx = loadLogic();
+  const legacy = { ...sampleCard, layout: 'LEGACY' };
+  assert.equal(ctx.missingForPattern(legacy, sampleCard.numbers, 'LINE'), 99);
+  assert.equal(ctx.missingForPattern(legacy, sampleCard.numbers, 'CORNERS'), 99);
+  assert.equal(ctx.missingForPattern(legacy, sampleCard.numbers, 'FULL'), 0);
 });
 
 test('gerador cria cartela BINGO 75 com 24 números únicos nas faixas corretas', () => {
