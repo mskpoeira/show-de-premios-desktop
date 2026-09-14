@@ -3,6 +3,7 @@ contextBridge.exposeInMainWorld('showApp', {
   authStatus: () => ipcRenderer.invoke('auth:status'),
   setupMaster: password => ipcRenderer.invoke('auth:setup-master', password),
   login: (login, password) => ipcRenderer.invoke('auth:login', login, password),
+  setUserPassword: (userId, password) => ipcRenderer.invoke('auth:set-user-password', userId, password),
   logout: () => ipcRenderer.invoke('auth:logout'),
   load: () => ipcRenderer.invoke('data:load'),
   save: data => ipcRenderer.invoke('data:save', data),
