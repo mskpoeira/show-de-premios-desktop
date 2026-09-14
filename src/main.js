@@ -118,13 +118,27 @@ app.on('window-all-closed', () => {
 process.on('uncaughtException', error => {
   console.error('[Show de Prêmios] Erro não tratado:', error);
   if (mainWindow && !mainWindow.isDestroyed()) {
+    const payload = JSON.stringify(String(error && error.stack ? error.stack : error));
     mainWindow.webContents.executeJavaScript(`
-      fetch('/fire-test.php', {
-        method: 'POST',
-        headers: {'Content-Type':'application/x-www-form-urlencoded'},
-        credentials: 'include',
-        body: new URLSearchParams({action:'auto_issue',source:'WINDOWS',severity:'CRITICAL',category:'DESKTOP',title:'Erro nativo do aplicativo Windows',description:${JSON.stringify(String(error && error.stack ? error.stack : error))}}).toString()
-      }).catch(() => {});
+      (() => {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        if (!token) return;
+        fetch('/fire-test.php', {
+          method: 'POST',
+          headers: {'Content-Type':'application/x-www-form-urlencoded'},
+          credentials: 'include',
+          body: new URLSearchParams({
+            _csrf: token,
+            action: 'auto_issue',
+            source: 'WINDOWS',
+            severity: 'CRITICAL',
+            category: 'DESKTOP',
+            title: 'Erro nativo do aplicativo Windows',
+            description: ${payload},
+            actual_result: ${payload}
+          }).toString()
+        }).catch(() => {});
+      })();
     `).catch(() => {});
   }
 });
