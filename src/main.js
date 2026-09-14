@@ -64,7 +64,7 @@ function normalizeData(input) {
   }));
   if (!data.rounds.length) data.rounds = clone(seed.rounds);
   data.event.rounds = data.rounds.length;
-  data.cards = data.cards.map(c => ({ ...c, type: c?.type === 'PHYSICAL' ? 'PHYSICAL' : 'DIGITAL', createdAt: c?.createdAt || c?.at || now(), status: c?.status === 'canceled' ? 'canceled' : 'valid' }));
+  data.cards = data.cards.map(c => ({ ...c, layout: c?.layout || 'LEGACY', type: c?.type === 'PHYSICAL' ? 'PHYSICAL' : 'DIGITAL', createdAt: c?.createdAt || c?.at || now(), status: c?.status === 'canceled' ? 'canceled' : 'valid' }));
   const master = data.users.find(u => u?.role === 'MASTER');
   if (!master) data.users.unshift(clone(seed.users[0]));
   data.currentUserId = Number(data.currentUserId) || data.users.find(u => u.role === 'MASTER')?.id || 1;
@@ -157,16 +157,41 @@ function mergeAuthorizedState(incomingRaw) {
   }
 
   if (actor.role === 'OPERATOR') {
-    incoming.settings = clone(stored.settings);
-    incoming.event = { ...clone(stored.event), status: incoming.event.status };
+    const requestedDrawMode = ['automatic', 'click', 'manual'].includes(incoming.settings?.drawMode) ? incoming.settings.drawMode : stored.settings.drawMode;
+    incoming.settings = { ...clone(stored.settings), drawMode: requestedDrawMode };
+    incoming.event = { ...clone(stored.event), status: ['planning', 'live', 'closed'].includes(incoming.event.status) ? incoming.event.status : stored.event.status };
     incoming.sellers = clone(stored.sellers);
     incoming.cashClosings = clone(stored.cashClosings);
+
+    const preserveExisting = (existing, proposed, sanitizeNew = value => value) => {
+      const ids = new Set(existing.map(item => String(item.id)));
+      return [...clone(existing), ...proposed.filter(item => !ids.has(String(item.id))).map(sanitizeNew)];
+    };
+    incoming.sales = preserveExisting(stored.sales, incoming.sales, sale => {
+      const qty = Math.min(100, Math.max(1, Number.parseInt(sale.qty, 10) || 1));
+      const seller = stored.sellers.find(s => String(s.id) === String(sale.sellerId)) || stored.sellers.find(s => s.active !== false) || stored.sellers[0];
+      return { ...sale, buyer: sanitizeText(sale.buyer, 120), cpf: sanitizeText(sale.cpf, 20), phone: sanitizeText(sale.phone, 30), qty, value: Math.floor(qty / 3) * Number(stored.settings.triplePrice || 0) + (qty % 3) * Number(stored.settings.salePrice || 0), sellerId: seller?.id, seller: seller?.name || 'Caixa principal', status: 'valid', at: sale.at || now() };
+    });
+    incoming.cards = preserveExisting(stored.cards, incoming.cards, card => ({ ...card, layout: card.layout === 'BINGO75' ? 'BINGO75' : 'LEGACY', status: 'valid', createdAt: card.createdAt || now() }));
+    incoming.withdrawals = preserveExisting(stored.withdrawals, incoming.withdrawals, withdrawal => ({ ...withdrawal, description: sanitizeText(withdrawal.description, 160), value: Math.max(0, Number(withdrawal.value || 0)), at: withdrawal.at || now(), user: actor.name }));
+    incoming.winners = preserveExisting(stored.winners, incoming.winners, winner => {
+      const copy = { ...winner, status: 'pending', operator: actor.name, at: winner.at || now() };
+      delete copy.paidAt; delete copy.paidBy;
+      return copy;
+    });
   }
 
   incoming.audit = appendAudit(stored, incoming, actor);
   incoming.currentUserId = actor.userId;
   incoming.version = DATA_VERSION;
   return incoming;
+}
+
+function syncSessionFromData(data) {
+  if (!session) return;
+  const user = data.users.find(u => String(u.id) === String(session.userId));
+  if (!user || user.active === false) { session = null; return; }
+  session = { userId: user.id, name: user.name, role: user.role };
 }
 
 function createWindow() {
@@ -254,6 +279,7 @@ app.whenReady().then(() => {
   ipcMain.handle('data:load', () => { requireSession(); return publicState(readData()); });
   ipcMain.handle('data:save', (_event, data) => {
     const saved = writeData(mergeAuthorizedState(data));
+    syncSessionFromData(saved);
     return { ok: true, data: publicState(saved) };
   });
   ipcMain.handle('data:export', async () => {
