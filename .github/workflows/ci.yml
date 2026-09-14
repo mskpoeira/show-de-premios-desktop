@@ -46,15 +46,16 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
           $root = Join-Path $PWD 'dist\Show-de-Premios-Windows'
-          $resources = Join-Path $root 'resources\app'
           if (Test-Path $root) { Remove-Item -Recurse -Force $root }
-          New-Item -ItemType Directory -Force -Path $resources | Out-Null
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
 
           Copy-Item -Path 'node_modules\electron\dist\*' -Destination $root -Recurse -Force
           $electronExe = Join-Path $root 'electron.exe'
           if (!(Test-Path $electronExe)) { throw 'electron.exe não encontrado no pacote Electron.' }
           Rename-Item -Path $electronExe -NewName 'Show-de-Premios.exe'
 
+          $resources = Join-Path $root 'resources\app'
+          New-Item -ItemType Directory -Force -Path $resources | Out-Null
           Copy-Item -Path 'src' -Destination $resources -Recurse -Force
           Copy-Item -Path 'package.json' -Destination $resources -Force
           @"
