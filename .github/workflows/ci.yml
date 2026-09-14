@@ -30,10 +30,53 @@ jobs:
       - run: npm ci
       - run: npm run verify
       - run: npm audit --audit-level=high
-      - run: npm run pack:win
+
+      - name: Build NSIS installer (best effort)
+        shell: pwsh
+        run: |
+          npm run pack:win
+          if ($LASTEXITCODE -ne 0) {
+            Write-Warning "electron-builder/NSIS falhou. O CI continuará e produzirá o pacote Windows portátil para a prova de fogo."
+          }
+          exit 0
+
+      - name: Build synchronized portable Windows package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $root = Join-Path $PWD 'dist\Show-de-Premios-Windows'
+          $resources = Join-Path $root 'resources\app'
+          if (Test-Path $root) { Remove-Item -Recurse -Force $root }
+          New-Item -ItemType Directory -Force -Path $resources | Out-Null
+
+          Copy-Item -Path 'node_modules\electron\dist\*' -Destination $root -Recurse -Force
+          $electronExe = Join-Path $root 'electron.exe'
+          if (!(Test-Path $electronExe)) { throw 'electron.exe não encontrado no pacote Electron.' }
+          Rename-Item -Path $electronExe -NewName 'Show-de-Premios.exe'
+
+          Copy-Item -Path 'src' -Destination $resources -Recurse -Force
+          Copy-Item -Path 'package.json' -Destination $resources -Force
+          @"
+          SHOW DE PRÊMIOS WINDOWS v$version — PROVA DE FOGO
+
+          1. Extraia todo o conteúdo deste ZIP.
+          2. Execute Show-de-Premios.exe.
+          3. O aplicativo abrirá a mesma plataforma Web e a mesma base de dados.
+          4. O módulo de testes fica em 🧪 Prova de Fogo ou /fire-test.php.
+          5. Sem internet, o aplicativo interrompe operações para evitar divergência entre Web e Windows.
+          "@ | Set-Content -Path (Join-Path $root 'LEIA-ME.txt') -Encoding UTF8
+
+          $zip = Join-Path $PWD "dist\Show-de-Premios-Windows-$version-portable.zip"
+          if (Test-Path $zip) { Remove-Item -Force $zip }
+          Compress-Archive -Path "$root\*" -DestinationPath $zip -CompressionLevel Optimal
+          if (!(Test-Path $zip)) { throw 'Falha ao gerar pacote portátil.' }
+
       - uses: actions/upload-artifact@v4
         with:
           name: show-de-premios-windows-${{ github.run_number }}
-          path: dist/*.exe
+          path: |
+            dist/*.exe
+            dist/*-portable.zip
           if-no-files-found: error
           retention-days: 14
