@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, "fix/**"]
+    branches: [main, "fix/**", "release/**"]
   pull_request:
     branches: [main]
 
@@ -33,7 +33,7 @@ jobs:
       - run: npm run pack:win
       - uses: actions/upload-artifact@v4
         with:
-          name: show-de-premios-windows
+          name: show-de-premios-windows-${{ github.run_number }}
           path: dist/*.exe
           if-no-files-found: error
           retention-days: 14
