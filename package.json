@@ -11,7 +11,7 @@
     "check": "node --check src/main.js && node --check src/preload.js && node --check src/services/pix.js && node --check src/renderer/renderer.js && node --check src/renderer/renderer-core.js && node --check src/renderer/renderer-logic.js && node --check src/renderer/renderer-fixes.js && node --check src/renderer/renderer-events.js",
     "test": "node --test test/*.test.js",
     "verify": "npm run check && npm test",
-    "pack:win": "electron-builder --win nsis"
+    "pack:win": "electron-builder --win nsis --publish never"
   },
   "devDependencies": {
     "electron": "^44.3.0",
