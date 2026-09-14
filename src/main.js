@@ -7,6 +7,7 @@ const { createPixPayload } = require('./services/pix');
 
 let mainWindow;
 let session = null;
+const loginAttempts = new Map();
 const DATA_VERSION = 4;
 const dataPath = () => path.join(app.getPath('userData'), 'show-de-premios.json');
 const backupPath = () => `${dataPath()}.bak`;
@@ -148,7 +149,7 @@ function mergeAuthorizedState(incomingRaw) {
   const storedMaster = stored.users.find(u => u.role === 'MASTER');
   const secrets = new Map(stored.users.map(u => [String(u.id), { passwordHash: u.passwordHash || '', passwordSalt: u.passwordSalt || '' }]));
 
-  if (actor.role !== 'MASTER') incoming.users = clone(stored.users);
+  if (!['MASTER', 'ADMIN'].includes(actor.role)) incoming.users = clone(stored.users);
   else {
     incoming.users = incoming.users.filter(u => u.role !== 'MASTER');
     incoming.users.unshift(clone(storedMaster));
@@ -173,8 +174,10 @@ function createWindow() {
     width: 1500, height: 940, minWidth: 1000, minHeight: 680,
     backgroundColor: '#f4f7fb',
     title: 'Show de Prêmios',
-    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false }
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false, devTools: process.argv.includes('--dev') }
   });
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  mainWindow.webContents.on('will-navigate', (event, url) => { if (!url.startsWith('file://')) event.preventDefault(); });
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'login.html'));
 }
@@ -199,18 +202,56 @@ app.whenReady().then(() => {
     return { ok: true, user: { id: master.id, name: master.name, role: master.role } };
   });
   ipcMain.handle('auth:login', (_event, login, password) => {
+    const loginKey = String(login || '').trim().toLowerCase();
+    const attempt = loginAttempts.get(loginKey);
+    if (attempt?.lockedUntil > Date.now()) {
+      const seconds = Math.ceil((attempt.lockedUntil - Date.now()) / 1000);
+      throw new Error(`Acesso temporariamente bloqueado. Tente novamente em ${seconds}s.`);
+    }
     const data = readData();
-    const user = data.users.find(u => u.active !== false && String(u.login).toLowerCase() === String(login || '').trim().toLowerCase());
-    if (!user?.passwordHash || !user?.passwordSalt) throw new Error('Usuário ou senha inválidos.');
-    const given = Buffer.from(passwordDigest(password, user.passwordSalt), 'hex');
-    const expected = Buffer.from(user.passwordHash, 'hex');
-    if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) throw new Error('Usuário ou senha inválidos.');
+    const user = data.users.find(u => u.active !== false && String(u.login).toLowerCase() === loginKey);
+    let valid = false;
+    if (user?.passwordHash && user?.passwordSalt) {
+      const given = Buffer.from(passwordDigest(password, user.passwordSalt), 'hex');
+      const expected = Buffer.from(user.passwordHash, 'hex');
+      valid = given.length === expected.length && crypto.timingSafeEqual(given, expected);
+    }
+    if (!valid) {
+      const count = (attempt?.count || 0) + 1;
+      loginAttempts.set(loginKey, { count: count >= 5 ? 0 : count, lockedUntil: count >= 5 ? Date.now() + 5 * 60 * 1000 : 0 });
+      throw new Error('Usuário ou senha inválidos.');
+    }
+    loginAttempts.delete(loginKey);
     session = { userId: user.id, name: user.name, role: user.role };
+    data.audit.unshift({ id: crypto.randomUUID(), at: now(), action: 'Login realizado', user: user.name, protected: true });
+    writeData(data);
     return { ok: true, user: { id: user.id, name: user.name, role: user.role } };
   });
-  ipcMain.handle('auth:logout', () => { session = null; return { ok: true }; });
+  ipcMain.handle('auth:set-user-password', (_event, userId, password) => {
+    requireSession(['MASTER', 'ADMIN']);
+    if (String(password || '').length < 8) throw new Error('A senha deve ter pelo menos 8 caracteres.');
+    const data = readData();
+    const user = data.users.find(u => String(u.id) === String(userId));
+    if (!user) throw new Error('Usuário não localizado.');
+    if (user.role === 'MASTER') throw new Error('O Administrador Master é protegido por este fluxo.');
+    const salt = crypto.randomBytes(16).toString('hex');
+    user.passwordSalt = salt;
+    user.passwordHash = passwordDigest(password, salt);
+    data.audit.unshift({ id: crypto.randomUUID(), at: now(), action: `Senha do usuário ${user.login} atualizada`, user: session.name, protected: true });
+    writeData(data);
+    return { ok: true };
+  });
+  ipcMain.handle('auth:logout', () => {
+    if (session) {
+      const data = readData();
+      data.audit.unshift({ id: crypto.randomUUID(), at: now(), action: 'Logout realizado', user: session.name, protected: true });
+      writeData(data);
+    }
+    session = null;
+    return { ok: true };
+  });
 
-  ipcMain.handle('data:load', () => publicState(readData()));
+  ipcMain.handle('data:load', () => { requireSession(); return publicState(readData()); });
   ipcMain.handle('data:save', (_event, data) => {
     const saved = writeData(mergeAuthorizedState(data));
     return { ok: true, data: publicState(saved) };
@@ -243,7 +284,7 @@ app.whenReady().then(() => {
   });
   ipcMain.handle('screen:open', () => {
     requireSession();
-    const win = new BrowserWindow({ fullscreen: true, backgroundColor: '#07101d', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false } });
+    const win = new BrowserWindow({ fullscreen: true, backgroundColor: '#07101d', webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: false, devTools: false } });
     win.loadFile(path.join(__dirname, 'renderer', 'screen.html'));
     return { ok: true };
   });
