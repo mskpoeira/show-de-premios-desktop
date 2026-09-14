@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Show de Prêmios — Sem conexão</title>
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0f172a;color:#f8fafc;font-family:Arial,sans-serif}.card{max-width:650px;margin:24px;padding:32px;border:1px solid #334155;border-radius:18px;background:#1e293b;box-shadow:0 20px 60px #0005}.badge{display:inline-block;background:#7c3aed;padding:6px 10px;border-radius:999px;font-weight:700}a,button{display:inline-block;margin-top:14px;background:#2563eb;color:#fff;text-decoration:none;border:0;border-radius:10px;padding:12px 16px;font-weight:700;cursor:pointer}.muted{color:#94a3b8;font-size:13px;word-break:break-word}</style>
+</head>
+<body><main class="card"><span class="badge" id="version">Show de Prêmios</span><h1>Sem conexão com a versão sincronizada</h1><p>Para manter Web e Windows usando exatamente os mesmos eventos, cartelas, sorteios, caixa e relatórios, esta versão de teste não permite criar uma base paralela quando a conexão cai.</p><p>Restabeleça a internet e clique em <strong>Tentar novamente</strong>. Assim evitamos divergência de dados no meio do evento.</p><a id="retry" href="https://showdepremios.mskpoeira.com.br">Tentar novamente</a><p class="muted" id="reason"></p></main>
+<script>
+const q=new URLSearchParams(location.search);const target=q.get('target')||'https://showdepremios.mskpoeira.com.br';document.getElementById('retry').href=target;document.getElementById('version').textContent='Show de Prêmios Windows v'+(q.get('version')||'0.5.0-rc.1');document.getElementById('reason').textContent=q.get('reason')?('Detalhe técnico: '+q.get('reason')):'';
+</script></body></html>
