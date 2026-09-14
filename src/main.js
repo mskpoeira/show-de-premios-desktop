@@ -1,7 +1,7 @@
 const { app, BrowserWindow, shell, dialog } = require('electron');
 const path = require('path');
+const { version: APP_VERSION } = require('../package.json');
 
-const APP_VERSION = '0.5.0-rc.1';
 const DEFAULT_WEB_URL = 'https://showdepremios.mskpoeira.com.br';
 const WEB_URL = process.env.SHOW_DE_PREMIOS_URL || DEFAULT_WEB_URL;
 
@@ -12,10 +12,29 @@ function isAllowedAppUrl(rawUrl) {
   try {
     const target = new URL(rawUrl);
     const allowed = new URL(WEB_URL);
-    return target.origin === allowed.origin || target.protocol === 'file:';
+    return target.protocol === 'https:' && target.origin === allowed.origin;
   } catch {
     return false;
   }
+}
+
+function canOpenExternally(rawUrl) {
+  try {
+    const target = new URL(rawUrl);
+    return ['https:', 'http:', 'mailto:'].includes(target.protocol);
+  } catch {
+    return false;
+  }
+}
+
+function openExternalSafely(rawUrl) {
+  if (!canOpenExternally(rawUrl)) {
+    console.warn('[Show de Prêmios] Navegação externa bloqueada:', rawUrl);
+    return;
+  }
+  shell.openExternal(rawUrl).catch(error => {
+    console.error('[Show de Prêmios] Falha ao abrir link externo:', error.message);
+  });
 }
 
 async function loadSynchronizedApp() {
@@ -62,26 +81,35 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      devTools: process.argv.includes('--dev')
+      devTools: process.argv.includes('--dev'),
+      webSecurity: true
     }
   });
 
   mainWindow.setMenuBarVisibility(false);
+
+  mainWindow.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) => {
+    callback(false);
+  });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (isAllowedAppUrl(url)) {
       mainWindow.loadURL(url).catch(() => loadOfflineScreen('Falha ao abrir página interna.'));
       return { action: 'deny' };
     }
-    shell.openExternal(url).catch(() => {});
+    openExternalSafely(url);
     return { action: 'deny' };
   });
 
   mainWindow.webContents.on('will-navigate', (event, url) => {
     if (!isAllowedAppUrl(url)) {
       event.preventDefault();
-      shell.openExternal(url).catch(() => {});
+      openExternalSafely(url);
     }
+  });
+
+  mainWindow.webContents.on('will-attach-webview', event => {
+    event.preventDefault();
   });
 
   mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
