@@ -13,6 +13,8 @@ jobs:
   version-sync:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.sync.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,6 +23,7 @@ jobs:
         with:
           node-version: 22
       - name: Synchronize VERSION and package-lock with package.json
+        id: sync
         shell: bash
         run: |
           set -euo pipefail
@@ -37,21 +40,32 @@ jobs:
           fs.writeFileSync('package-lock.json', JSON.stringify(lock, null, 2) + '\n');
           console.log(`Versão sincronizada: ${pkg.version}`);
           NODE
+
+          if git diff --quiet -- VERSION package-lock.json; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            echo 'Metadados de versão já sincronizados.'
+          else
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+            echo 'Metadados de versão divergentes; serão corrigidos automaticamente.'
+          fi
       - name: Commit automatic version corrections
+        if: steps.sync.outputs.changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- VERSION package-lock.json; then
-            echo 'Metadados de versão já sincronizados.'
-            exit 0
-          fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add VERSION package-lock.json
-          git commit -m 'chore(version): auto-sync version metadata [skip ci]'
+          git commit -m 'chore(version): auto-sync version metadata'
           git push origin HEAD:main
 
   verify:
+    needs: version-sync
+    if: >-
+      always() &&
+      (github.event_name == 'pull_request' ||
+       needs.version-sync.result == 'skipped' ||
+       (needs.version-sync.result == 'success' && needs.version-sync.outputs.changed != 'true'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -80,6 +94,12 @@ jobs:
       - run: npm audit --audit-level=high
 
   windows-package:
+    needs: version-sync
+    if: >-
+      always() &&
+      (github.event_name == 'pull_request' ||
+       needs.version-sync.result == 'skipped' ||
+       (needs.version-sync.result == 'success' && needs.version-sync.outputs.changed != 'true'))
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
