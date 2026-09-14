@@ -45,19 +45,23 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          $root = Join-Path $PWD 'dist\Show-de-Premios-Windows'
+          $root = Join-Path $env:RUNNER_TEMP 'Show-de-Premios-Windows'
           if (Test-Path $root) { Remove-Item -Recurse -Force $root }
           New-Item -ItemType Directory -Force -Path $root | Out-Null
 
-          Copy-Item -Path 'node_modules\electron\dist\*' -Destination $root -Recurse -Force
+          $electronDist = Join-Path $PWD 'node_modules\electron\dist'
+          if (!(Test-Path $electronDist)) { throw "Electron dist não encontrado em $electronDist" }
+          Copy-Item -Path (Join-Path $electronDist '*') -Destination $root -Recurse -Force
+
           $electronExe = Join-Path $root 'electron.exe'
           if (!(Test-Path $electronExe)) { throw 'electron.exe não encontrado no pacote Electron.' }
-          Rename-Item -Path $electronExe -NewName 'Show-de-Premios.exe'
+          Rename-Item -Path $electronExe -NewName 'Show-de-Premios.exe' -Force
 
           $resources = Join-Path $root 'resources\app'
           New-Item -ItemType Directory -Force -Path $resources | Out-Null
           Copy-Item -Path 'src' -Destination $resources -Recurse -Force
           Copy-Item -Path 'package.json' -Destination $resources -Force
+
           @"
           SHOW DE PRÊMIOS WINDOWS v$version — PROVA DE FOGO
 
@@ -68,12 +72,15 @@ jobs:
           5. Sem internet, o aplicativo interrompe operações para evitar divergência entre Web e Windows.
           "@ | Set-Content -Path (Join-Path $root 'LEIA-ME.txt') -Encoding UTF8
 
+          New-Item -ItemType Directory -Force -Path (Join-Path $PWD 'dist') | Out-Null
           $zip = Join-Path $PWD "dist\Show-de-Premios-Windows-$version-portable.zip"
           if (Test-Path $zip) { Remove-Item -Force $zip }
-          Compress-Archive -Path "$root\*" -DestinationPath $zip -CompressionLevel Optimal
+          Compress-Archive -Path (Join-Path $root '*') -DestinationPath $zip -CompressionLevel Optimal
           if (!(Test-Path $zip)) { throw 'Falha ao gerar pacote portátil.' }
+          Write-Host "Pacote portátil criado: $zip"
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload Windows test package
+        uses: actions/upload-artifact@v4
         with:
           name: show-de-premios-windows-${{ github.run_number }}
           path: |
