@@ -1,7 +1,7 @@
 {
   "name": "show-de-premios-desktop",
-  "version": "0.4.0",
-  "description": "Show de Prêmios - aplicativo desktop offline-first",
+  "version": "0.5.0-rc.1",
+  "description": "Show de Prêmios - cliente Windows sincronizado com a versão web",
   "main": "src/main.js",
   "author": "Thiago Alves Cardozo",
   "license": "UNLICENSED",
@@ -11,7 +11,7 @@
     "check": "node --check src/main.js && node --check src/preload.js && node --check src/services/pix.js && node --check src/renderer/renderer.js && node --check src/renderer/renderer-core.js && node --check src/renderer/renderer-logic.js && node --check src/renderer/renderer-fixes.js && node --check src/renderer/renderer-events.js",
     "test": "node --test test/*.test.js",
     "verify": "npm run check && npm test",
-    "pack:win": "electron-builder --win nsis"
+    "pack:win": "electron-builder --win nsis --publish never"
   },
   "devDependencies": {
     "electron": "^44.3.0",
@@ -21,6 +21,7 @@
   "build": {
     "appId": "br.com.mskpoeira.showdepremios",
     "productName": "Show de Prêmios",
+    "artifactName": "Show-de-Premios-Setup-${version}.${ext}",
     "directories": { "output": "dist" },
     "files": ["src/**/*", "package.json"],
     "win": { "target": "nsis" },
