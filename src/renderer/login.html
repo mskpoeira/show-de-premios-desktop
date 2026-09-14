@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Acesso — Show de Prêmios</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 20% 10%,#244f86,#07101d 65%);font-family:"Segoe UI",Arial,sans-serif;color:#10243f}.card{width:min(92vw,430px);background:#fff;border-radius:24px;padding:34px;box-shadow:0 28px 80px #0008}.brand{display:flex;align-items:center;gap:14px;margin-bottom:26px}.mark{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;background:#156fe5;color:#fff;font-size:26px}.brand b{display:block;font-size:22px}.brand small{color:#6d7f95}h1{font-size:24px;margin:0 0 8px}p{color:#68798e;line-height:1.45;margin:0 0 22px}label{display:block;font-size:13px;font-weight:700;margin:15px 0 6px}input{width:100%;padding:13px 14px;border:1px solid #cbd5e1;border-radius:11px;font-size:16px;outline:none}input:focus{border-color:#1677ed;box-shadow:0 0 0 3px #1677ed20}button{width:100%;margin-top:20px;padding:13px;border:0;border-radius:11px;background:#1677ed;color:#fff;font-weight:800;font-size:15px;cursor:pointer}.error{min-height:20px;margin-top:14px;color:#c52c37;font-size:13px;font-weight:700}.hint{margin-top:14px;font-size:12px;color:#74859a}.hidden{display:none}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="brand"><div class="mark">★</div><div><b>Show de Prêmios</b><small>Operação segura e offline</small></div></div>
+    <section id="setup" class="hidden">
+      <h1>Primeiro acesso</h1>
+      <p>Crie a senha do Administrador Master. Ela protegerá o banco de dados e as operações administrativas.</p>
+      <form id="setupForm">
+        <label for="setupPassword">Nova senha</label><input id="setupPassword" type="password" minlength="8" required autocomplete="new-password">
+        <label for="setupConfirm">Confirmar senha</label><input id="setupConfirm" type="password" minlength="8" required autocomplete="new-password">
+        <button type="submit">Criar senha e entrar</button>
+      </form>
+      <div class="hint">Mínimo de 8 caracteres. Não existe senha padrão.</div>
+    </section>
+    <section id="login" class="hidden">
+      <h1>Entrar</h1>
+      <p>Informe suas credenciais para acessar o sistema.</p>
+      <form id="loginForm">
+        <label for="loginName">Usuário</label><input id="loginName" value="admin" required autocomplete="username">
+        <label for="loginPassword">Senha</label><input id="loginPassword" type="password" required autocomplete="current-password">
+        <button type="submit">Entrar</button>
+      </form>
+    </section>
+    <div class="error" id="error"></div>
+  </main>
+<script>
+const $=s=>document.querySelector(s);
+const fail=e=>{$('#error').textContent=e?.message||String(e||'Falha de autenticação.');};
+async function boot(){
+  try{
+    const status=await window.showApp.authStatus();
+    if(status.authenticated){location.href='index.html';return;}
+    $('#setup').classList.toggle('hidden',!status.needsSetup);
+    $('#login').classList.toggle('hidden',status.needsSetup);
+  }catch(e){fail(e)}
+}
+$('#setupForm').onsubmit=async e=>{e.preventDefault();$('#error').textContent='';const p=$('#setupPassword').value,c=$('#setupConfirm').value;if(p!==c)return fail(new Error('As senhas não coincidem.'));try{await window.showApp.setupMaster(p);location.href='index.html'}catch(err){fail(err)}};
+$('#loginForm').onsubmit=async e=>{e.preventDefault();$('#error').textContent='';try{await window.showApp.login($('#loginName').value,$('#loginPassword').value);location.href='index.html'}catch(err){fail(err)}};
+boot();
+</script>
+</body>
+</html>

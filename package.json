@@ -1,6 +1,6 @@
 {
   "name": "show-de-premios-desktop",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Show de Prêmios - aplicativo desktop offline-first",
   "main": "src/main.js",
   "author": "Thiago Alves Cardozo",
@@ -8,10 +8,13 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/services/pix.js && node --check src/renderer/renderer.js && node --check src/renderer/renderer-core.js && node --check src/renderer/renderer-logic.js && node --check src/renderer/renderer-fixes.js && node --check src/renderer/renderer-events.js",
+    "test": "node --test test/*.test.js",
+    "verify": "npm run check && npm test",
     "pack:win": "electron-builder --win nsis"
   },
   "devDependencies": {
-    "electron": "^39.0.0",
+    "electron": "^44.3.0",
     "electron-builder": "^26.0.12",
     "qrcode": "^1.5.4"
   },
